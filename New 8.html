@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Bookmarks</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f9;
+        }
+        h1 {
+            text-align: center;
+            color: #34495e;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .folder-form, .bookmark-form {
+            margin-bottom: 20px;
+        }
+        input[type="text"], input[type="url"], select {
+            padding: 10px;
+            width: 100%;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .folder-list, .bookmark-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        .folder-item, .bookmark-item {
+            margin: 10px 0;
+            background-color: #f9f9f9;
+            padding: 10px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 10px; /* Space between buttons */
+            justify-content: flex-start; /* Align buttons to the left */
+            width: auto;
+        }
+        .folder-item button, .bookmark-item button {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .folder-item button:hover, .bookmark-item button:hover {
+            background-color: #e53935;
+        }
+        .edit-button {
+            background-color: #ff9800;
+        }
+        .edit-button:hover {
+            background-color: #f57c00;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Your Bookmarks</h1>
+
+        <!-- Folder creation form -->
+        <div class="folder-form">
+            <input type="text" id="folder-name" placeholder="Enter folder name" />
+            <button onclick="addFolder()">Create Folder</button>
+        </div>
+
+        <!-- Bookmark creation form -->
+        <div class="bookmark-form">
+            <input type="text" id="bookmark-title" placeholder="Enter bookmark title" />
+            <input type="url" id="bookmark-url" placeholder="Enter bookmark URL" />
+            <select id="folder-select">
+                <option value="" disabled selected>Select Folder</option>
+            </select>
+            <button onclick="addBookmark()">Add Bookmark</button>
+        </div>
+
+        <!-- Folders display -->
+        <h2 id="folders-heading">Your Folders</h2>
+        <ul id="folder-list" class="folder-list"></ul>
+    </div>
+
+    <script>
+        // Load folders from localStorage when the page loads
+        document.addEventListener("DOMContentLoaded", function() {
+            loadFolders();
+        });
+
+        // Add a new folder
+        function addFolder() {
+            const folderName = document.getElementById("folder-name").value;
+            if (folderName) {
+                let folders = JSON.parse(localStorage.getItem("folders")) || [];
+                folders.push({ name: folderName, bookmarks: [] });
+                localStorage.setItem("folders", JSON.stringify(folders));
+                loadFolders();
+                document.getElementById("folder-name").value = '';
+            } else {
+                alert("Please enter a folder name.");
+            }
+        }
+
+        // Load folders and bookmarks from localStorage
+        function loadFolders() {
+            const folderList = document.getElementById("folder-list");
+            const folderSelect = document.getElementById("folder-select");
+            const foldersHeading = document.getElementById("folders-heading");
+            
+            folderList.innerHTML = '';
+            folderSelect.innerHTML = '<option value="" disabled selected>Select Folder</option>';
+
+            const folders = JSON.parse(localStorage.getItem("folders")) || [];
+
+            // Hide the folder heading and list if no folders are available
+            if (folders.length === 0) {
+                foldersHeading.style.display = "none"; // Hide the heading
+                folderList.style.display = "none";     // Hide the folder list
+            } else {
+                foldersHeading.style.display = "block"; // Show the heading
+                folderList.style.display = "block";     // Show the folder list
+                
+                folders.forEach((folder, index) => {
+                    const li = document.createElement("li");
+                    li.className = "folder-item";
+                    li.innerHTML = `
+                        <span>${folder.name}</span>
+                        <div class="action-buttons">
+                            <button class="edit-button" onclick="editFolder(${index})">Edit</button>
+                            <button onclick="removeFolder(${index})">Remove</button>
+                        </div>
+                        <ul class="bookmark-list">
+                            ${folder.bookmarks.map(bookmark => `
+                                <li class="bookmark-item">
+                                    <a href="${bookmark.url}" target="_blank">${bookmark.title}</a>
+                                    <div class="action-buttons">
+                                        <button class="edit-button" onclick="editBookmark(${index}, '${bookmark.title}')">Edit</button>
+                                        <button onclick="removeBookmark(${index}, '${bookmark.title}')">Remove</button>
+                                    </div>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    `;
+                    folderList.appendChild(li);
+
+                    // Add folder to select dropdown for bookmarking
+                    const option = document.createElement("option");
+                    option.value = index;
+                    option.innerText = folder.name;
+                    folderSelect.appendChild(option);
+                });
+            }
+        }
+
+        // Remove a folder and its bookmarks
+        function removeFolder(folderIndex) {
+            let folders = JSON.parse(localStorage.getItem("folders")) || [];
+            folders.splice(folderIndex, 1);
+            localStorage.setItem("folders", JSON.stringify(folders));
+            loadFolders();
+        }
+
+        // Remove a bookmark from a folder
+        function removeBookmark(folderIndex, bookmarkTitle) {
+            let folders = JSON.parse(localStorage.getItem("folders")) || [];
+            const folder = folders[folderIndex];
+            folder.bookmarks = folder.bookmarks.filter(bookmark => bookmark.title !== bookmarkTitle);
+            localStorage.setItem("folders", JSON.stringify(folders));
+            loadFolders();
+        }
+
+        // Add a bookmark to the selected folder
+        function addBookmark() {
+            const title = document.getElementById("bookmark-title").value;
+            const url = document.getElementById("bookmark-url").value;
+            const folderIndex = document.getElementById("folder-select").value;
+
+            if (title && url && folderIndex !== null) {
+                let folders = JSON.parse(localStorage.getItem("folders")) || [];
+                const folder = folders[folderIndex];
+                folder.bookmarks.push({ title, url });
+                localStorage.setItem("folders", JSON.stringify(folders));
+                loadFolders();
+                document.getElementById("bookmark-title").value = '';
+                document.getElementById("bookmark-url").value = '';
+            } else {
+                alert("Please provide both title and URL, and select a folder.");
+            }
+        }
+
+        // Edit a folder's name
+        function editFolder(folderIndex) {
+            let folders = JSON.parse(localStorage.getItem("folders")) || [];
+            const folder = folders[folderIndex];
+            const newName = prompt("Edit folder name:", folder.name);
+            if (newName) {
+                folder.name = newName;
+                localStorage.setItem("folders", JSON.stringify(folders));
+                loadFolders();
+            }
+        }
+
+        // Edit a bookmark's title and URL
+        function editBookmark(folderIndex, bookmarkTitle) {
+            let folders = JSON.parse(localStorage.getItem("folders")) || [];
+            const folder = folders[folderIndex];
+            const bookmark = folder.bookmarks.find(b => b.title === bookmarkTitle);
+
+            const newTitle = prompt("Edit bookmark title:", bookmark.title);
+            const newUrl = prompt("Edit bookmark URL:", bookmark.url);
+
+            if (newTitle && newUrl) {
+                bookmark.title = newTitle;
+                bookmark.url = newUrl;
+                localStorage.setItem("folders", JSON.stringify(folders));
+                loadFolders();
+            }
+        }
+    </script>
+
+</body>
+</html>
